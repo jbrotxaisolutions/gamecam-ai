@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+
+    <!-- Plan Section (Simplified for Free Model) -->
+    <section class="bg-gray-800 p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">My Plan</h2>
+        <div class="bg-gray-700 p-6 rounded-lg border border-blue-500/30">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-white">Pro Hunter</h3>
+                    <p class="text-gray-400">You are on the Pro Hunter plan.</p>
+                </div>
+                <div>
+                    <span class="bg-blue-600 text-white px-4 py-2 rounded-md font-medium text-sm">
+                        Active
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Account Settings -->
+    <section class="bg-gray-800 p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Account Settings</h2>
+
+        <!-- Current Username Display Block -->
+        <div class="mb-8 p-4 bg-gray-700 rounded-lg border border-gray-600">
+            <label for="username_display" class="block text-sm font-medium text-gray-400">Current Username</label>
+            <input type="text" name="username_display" id="username_display" readonly
+                   class="mt-1 block w-full bg-gray-600 border-gray-500 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-0 cursor-not-allowed"
+                   value="{{ current_user.username }}">
+        </div>
+
+        <!-- Change Username Form -->
+        <form action="{{ url_for('profile') }}" method="POST" class="space-y-4 mb-8 border-b border-gray-700 pb-8">
+            <h3 class="text-lg font-medium text-gray-300">Change Username</h3>
+            <div>
+                <label for="new_username" class="block text-sm font-medium text-gray-400">New Username</label>
+                <input type="text" name="new_username" id="new_username" required
+                       class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+                <label for="current_password_username" class="block text-sm font-medium text-gray-400">Current Password
+                    (to confirm)</label>
+                <input type="password" name="current_password" id="current_password_username" required
+                       class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700">
+                    Update Username
+                </button>
+            </div>
+        </form>
+
+        <!-- Change Email Form -->
+        <form action="{{ url_for('profile') }}" method="POST" class="space-y-4 mb-8 border-b border-gray-700 pb-8">
+            <h3 class="text-lg font-medium text-gray-300">Change Email</h3>
+
+            <div>
+                <label for="new_email" class="block text-sm font-medium text-gray-400">New Email Address</label>
+                <input type="email" name="new_email" id="new_email" required
+                       class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="new_email_confirm" class="block text-sm font-medium text-gray-400">Confirm New Email
+                    Address</label>
+                <input type="email" name="new_email_confirm" id="new_email_confirm" required
+                       class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="current_password_email" class="block text-sm font-medium text-gray-400">Current Password (to confirm)</label>
+                <input type="password" name="current_password" id="current_password_email" required
+                       class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700">
+                    Update Email
+                </button>
+            </div>
+        </form>
+
+        <!-- Change Password Form -->
+        <form action="{{ url_for('profile') }}" method="POST" class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-300">Change Password</h3>
+
+            <div>
+                <label for="new_password" class="block text-sm font-medium text-gray-400">New Password</label>
+                <input type="password" name="new_password" id="new_password" required
+                       class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="new_password_confirm" class="block text-sm font-medium text-gray-400">Confirm New
+                    Password</label>
+                <input type="password" name="new_password_confirm" id="new_password_confirm" required
+                       class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="current_password_pass" class="block text-sm font-medium text-gray-400">Current Password (to
+                    confirm)</label>
+                <input type="password" name="current_password" id="current_password_pass" required
+                       class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700">
+                    Update Password
+                </button>
+            </div>
+        </form>
+    </section>
+
+</div>
+{% endblock %}

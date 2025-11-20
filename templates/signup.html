@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - GameCam AI{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="text-center">
+        <h1 class="text-4xl font-bold text-white sm:text-5xl">
+            Get Started, It's Free!
+        </h1>
+        <p class="mt-4 text-xl text-gray-400">
+            Start analyzing your trail camera footage today with our Pro plan, completely free.
+        </p>
+    </div>
+
+    <!-- Modified grid to center the single card -->
+    <div class="mt-16 max-w-md mx-auto">
+
+        <!-- Pro Hunter Plan -->
+        <div class="bg-gray-700 rounded-lg shadow-lg p-8 flex flex-col ring-2 ring-blue-500">
+            <div class="flex justify-between items-center">
+                <h3 class="text-2xl font-semibold text-white">Pro Hunter (Free)</h3>
+                <span class="bg-blue-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full">Now Free!</span>
+            </div>
+            <p class="mt-4 text-gray-300">For serious hunters covering multiple properties or large areas.</p>
+
+            <ul class="mt-8 space-y-4 text-gray-300">
+                <li class="flex items-start">
+                    <svg class="flex-shrink-0 h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span class="ml-3"><strong>Up to 5 Cameras</strong></span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="flex-shrink-0 h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span class="ml-3"><strong>Animal Tagging:</strong> Detection of Deer, hogs, etc.</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="flex-shrink-0 h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span class="ml-3"><strong>Junk Image Filter</strong></span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="flex-shrink-0 h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+
+                    <span class="ml-3"><strong>Prime Time Predictor</strong></span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="flex-shrink-0 h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span class="ml-3"><strong>Permanent Image Storage</strong></span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="flex-shrink-0 h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span class="ml-3"><strong>Historical Data Retention</strong></span>
+                </li>
+            </ul>
+            <div class="mt-auto pt-8">
+                <!-- Button now links to register page and says Sign Up -->
+                <a href="{{ url_for('register') }}"
+                   class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-semibold py-3 rounded-lg">
+                    Sign Up Now
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

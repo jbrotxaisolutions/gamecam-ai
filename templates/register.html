@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-gray-800 p-8 rounded-lg shadow-lg mt-10">
+    <h2 class="text-3xl font-bold text-white text-center mb-6">Create Your Free Account</h2>
+
+    <form method="POST" class="space-y-6">
+        <div>
+            <label for="username" class="block text-sm font-medium text-gray-300">Username</label>
+            <input type="text" name="username" id="username" required
+                   class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-300">Email Address</label>
+            <input type="email" name="email" id="email" required
+                   class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+            <label for="password" class="block text-sm font-medium text-gray-300">Password</label>
+            <input type="password" name="password" id="password" required
+                   class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+            <label for="confirm_password" class="block text-sm font-medium text-gray-300">Confirm Password</label>
+            <input type="password" name="confirm_password" id="confirm_password" required
+                   class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <!-- No hidden inputs needed for plan anymore -->
+
+        <div class="flex items-start">
+            <div class="flex items-center h-5">
+                <input id="agree_terms" name="agree_terms" type="checkbox" required
+                       class="focus:ring-blue-500 h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded">
+            </div>
+            <div class="ml-3 text-sm">
+                <label for="agree_terms" class="font-medium text-gray-300">I agree to the <a href="{{ url_for('tos') }}"
+                                                                                             class="text-blue-400 hover:underline"
+                                                                                             target="_blank">Terms of
+                    Service</a></label>
+            </div>
+        </div>
+        <div id="password-error" class="text-red-400 text-sm hidden">Passwords do not match.</div>
+        <div>
+            <button type="submit"
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Create Account
+            </button>
+        </div>
+    </form>
+    <div class="mt-6 text-center">
+        <p class="text-sm text-gray-400">
+            Already have an account? <a href="{{ url_for('login') }}"
+                                        class="font-medium text-blue-400 hover:text-blue-300">Log in</a>
+        </p>
+    </div>
+</div>
+
+<!-- Plan Features Section Updated -->
+<div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="text-center">
+        <h2 class="text-3xl font-bold text-white">Your Free Plan Features</h2>
+    </div>
+    <!-- Centering the single features card -->
+    <div class="mt-8 grid grid-cols-1 gap-8 md:grid-cols-1 max-w-md mx-auto">
+
+        <!-- Pro Hunter Plan -->
+        <div class="bg-gray-700 rounded-lg shadow-lg p-6 ring-2 ring-blue-500">
+            <h3 class="text-xl font-semibold text-white">Pro Hunter Plan</h3>
+            <ul class="mt-4 space-y-3 text-gray-300">
+                <li class="flex items-start">
+                    <span class="text-green-400 mr-2 flex-shrink-0">&#10003;</span>
+                    <span><strong>Up to 5 Cameras</strong></span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-green-400 mr-2 flex-shrink-0">&#10003;</span>
+                    <span>Animal Tagging</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-green-400 mr-2 flex-shrink-0">✓</span>
+                    <span>Junk Image Filter</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-green-400 mr-2 flex-shrink-0">&#10003;</span>
+                    <span>Prime Time Predictor</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-green-400 mr-2 flex-shrink-0">&#10003;</span>
+                    <span>Permanent Image Storage</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-green-400 mr-2 flex-shrink-0">&#10003;</span>
+                    <span>Historical Data Retention</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+<script>
+    const form = document.querySelector('form');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const errorDiv = document.getElementById('password-error');
+
+    form.addEventListener('submit', function (event) {
+        if (password.value !== confirmPassword.value) {
+            event.preventDefault(); // Stop the form from submitting
+            errorDiv.classList.remove('hidden'); // Show the error message
+        } else {
+            errorDiv.classList.add('hidden'); // Hide the error message if they match
+        }
+    });
+</script>
+{% endblock %}

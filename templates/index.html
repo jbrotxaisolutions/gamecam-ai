@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+
+    details > summary {
+        list-style: none;
+        cursor: pointer;
+    }
+
+    details > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .filter-btn.active {
+        background-color: #3b82f6;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <header class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-white">Your Dashboard</h1>
+        <p class="text-gray-400 mt-2">Filter your data to analyze animal movement patterns.</p>
+    </header>
+    <main>
+        <section class="bg-gray-800 p-6 rounded-lg shadow-md mb-8 text-center">
+            <h2 class="text-2xl font-semibold text-white mb-4">Manage Your Setup</h2>
+            <p class="text-gray-400 mb-6">Add or remove cameras, upload new images, and manage your photo gallery.</p>
+            <a href="{{ url_for('manage_cameras') }}"
+               class="bg-blue-600 text-white px-8 py-4 rounded-md font-semibold hover:bg-blue-700 inline-block text-lg transition-colors">
+                Go to Manage & Upload &rarr;
+            </a>
+        </section>
+
+        <section class="bg-gray-800 p-4 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold text-white mb-4">Filters</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label for="cameraFilter" class="block text-gray-400 text-sm font-bold mb-2">Filter by
+                        Camera</label>
+                    <select id="cameraFilter"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="all">All Cameras</option>
+                        {% for camera in cameras %}
+                        <option value="{{ camera.id }}">{{ camera.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="startDate" class="block text-gray-400 text-sm font-bold mb-2">Start Date</label>
+                        <input id="startDate"
+                               class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                               placeholder="Last 30 Days">
+                    </div>
+                    <div>
+                        <label for="endDate" class="block text-gray-400 text-sm font-bold mb-2">End Date</label>
+                        <input id="endDate"
+                               class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                               placeholder="Today">
+                    </div>
+                    <button id="clearDatesBtn"
+                            class="bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-500 self-end">
+                        Clear Dates
+                    </button>
+                </div>
+
+                <div class="md:col-span-2 lg:col-span-3">
+                    <label class="block text-gray-400 text-sm font-bold mb-2">Filter by Animal</label>
+                    <div id="filterButtons" class="flex flex-wrap items-center gap-3">
+                        <!-- Animal buttons will be rendered here by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button id="refreshDataBtn" class="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 transition-colors duration-200 ease-in-out shadow-md hover:shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                    </svg>
+                    Refresh Data
+                </button>
+            </div>
+        </section>
+
+        <section class="bg-gray-800 p-6 rounded-lg shadow-md mb-8">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
+                <h2 class="text-2xl font-semibold text-white">Prime Time Predictor</h2>
+                <div class="flex items-center gap-4">
+                    <div>
+                        <label for="predictionWindows" class="text-sm font-medium text-gray-400"># of Windows</label>
+                        <select id="predictionWindows"
+                                class="shadow-sm appearance-none border rounded py-1 px-2 bg-gray-700 border-gray-600 text-white focus:outline-none focus:shadow-outline">
+                            <option value="1">1</option>
+                            <option value="2" selected>2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="windowWidth" class="text-sm font-medium text-gray-400">Window Width</label>
+                        <select id="windowWidth"
+                                class="shadow-sm appearance-none border rounded py-1 px-2 bg-gray-700 border-gray-600 text-white focus:outline-none focus:shadow-outline">
+                            <option value="1">1 Hour</option>
+                            <option value="2" selected>2 Hours</option>
+                            <option value="3">3 Hours</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="relative h-[32rem]">
+                <canvas id="primeTimeChart"></canvas>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <section class="bg-gray-800 p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-white mb-4">Animal Breakdown</h2>
+                <div class="relative h-[32rem]">
+                    <canvas id="animalBreakdownChart"></canvas>
+                </div>
+            </section>
+            <section class="bg-gray-800 p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-white mb-4">Weekly Activity</h2>
+                <div class="relative h-[32rem]">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </section>
+        </div>
+
+        <section class="bg-gray-800 p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold text-white mb-4">Activity Over Time</h2>
+            <div class="relative h-[32rem]">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const dailyCanvas = document.getElementById('dailyChart');
+        const timelineCanvas = document.getElementById('timelineChart');
+        const primeTimeCanvas = document.getElementById('primeTimeChart');
+        const animalBreakdownCanvas = document.getElementById('animalBreakdownChart');
+        const filterButtonsContainer = document.getElementById('filterButtons');
+        const cameraFilter = document.getElementById('cameraFilter');
+        const predictionWindowsSelect = document.getElementById('predictionWindows');
+        const windowWidthSelect = document.getElementById('windowWidth');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const clearDatesBtn = document.getElementById('clearDatesBtn');
+        const refreshDataBtn = document.getElementById('refreshDataBtn');
+
+        let dailyChart, timelineChart, primeTimeChart, animalBreakdownChart;
+        let fullChartData = {};
+
+        const textColor = 'rgb(209, 213, 219)';
+        const gridColor = 'rgba(255, 255, 255, 0.1)';
+
+        cameraFilter.addEventListener('change', fetchChartData);
+        predictionWindowsSelect.addEventListener('change', fetchChartData);
+        windowWidthSelect.addEventListener('change', fetchChartData);
+        clearDatesBtn.addEventListener('click', () => {
+            startDatePicker.clear();
+            endDatePicker.clear();
+            fetchChartData();
+        });
+        refreshDataBtn.addEventListener('click', fetchChartData);
+
+
+        const datePickerOptions = {
+            dateFormat: "Y-m-d",
+            onChange: function (selectedDates, dateStr, instance) {
+                fetchChartData();
+            }
+        };
+        const startDatePicker = flatpickr(startDateInput, datePickerOptions);
+        const endDatePicker = flatpickr(endDateInput, datePickerOptions);
+
+        function createOrUpdateChart(canvas, chartInstance, type, data, options) {
+            const ctx = canvas.getContext('2d');
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+            return new Chart(ctx, {type, data, options});
+        }
+
+        function fetchChartData() {
+            const selectedCamera = cameraFilter.value;
+            const selectedAnimal = document.querySelector('.filter-btn.active')?.dataset.animal || 'all';
+            const predictionWindows = predictionWindowsSelect.value;
+            const windowWidth = windowWidthSelect.value;
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            const params = new URLSearchParams({
+                camera_id: selectedCamera,
+                animal: selectedAnimal,
+                prediction_windows: predictionWindows,
+                window_width: windowWidth
+            });
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+
+            fetch(`/data?${params.toString()}`, { cache: 'no-cache' })
+                    .then(response => response.json())
+                    .then(data => {
+                        fullChartData = data;
+
+                        createOrUpdatePrimeTimeChart(data.primeTimeData);
+                        createOrUpdateAnimalBreakdownChart(data.animalBreakdownData);
+                        renderFilterButtons(data.uniqueAnimals);
+                        filterAndRedrawCharts(selectedAnimal);
+                    }).catch(error => console.error('Error fetching chart data:', error));
+        }
+
+        function createOrUpdatePrimeTimeChart(data) {
+            if (!data || !data.labels || data.datasets.length === 0 || data.datasets[0].data.every(d => d === 0)) {
+                if (primeTimeChart) {
+                    primeTimeChart.destroy();
+                    primeTimeChart = null;
+                }
+                primeTimeCanvas.parentElement.innerHTML = '<canvas id="primeTimeChart"></canvas><p class="absolute inset-0 flex items-center justify-center text-gray-400">No data available for these filters.</p>';
+                return;
+            }
+            if (!document.getElementById('primeTimeChart')) {
+                 primeTimeCanvas.parentElement.innerHTML = '<canvas id="primeTimeChart"></canvas>';
+            }
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {position: 'top', labels: {color: textColor}},
+                    tooltip: {mode: 'index', intersect: false},
+                    annotation: {annotations: data.annotations || {}}
+                },
+                scales: {
+                    x: {
+                        title: {display: true, text: 'Time of Day', color: textColor},
+                        grid: {color: gridColor},
+                        ticks: {color: textColor}
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {display: true, text: 'Average Activity', color: textColor},
+                        ticks: {color: textColor},
+                        grid: {color: gridColor}
+                    }
+                }
+            };
+            primeTimeChart = createOrUpdateChart(document.getElementById('primeTimeChart'), primeTimeChart, 'line', {
+                labels: data.labels,
+                datasets: data.datasets
+            }, options);
+        }
+
+        function createOrUpdateAnimalBreakdownChart(data) {
+            if (!data || !data.labels || data.labels.length === 0) {
+                if (animalBreakdownChart) {
+                    animalBreakdownChart.destroy();
+                    animalBreakdownChart = null;
+                }
+                animalBreakdownCanvas.parentElement.innerHTML = '<canvas id="animalBreakdownChart"></canvas><p class="absolute inset-0 flex items-center justify-center text-gray-400">No animals detected yet.</p>';
+                return;
+            }
+             if (!document.getElementById('animalBreakdownChart')) {
+                 animalBreakdownCanvas.parentElement.innerHTML = '<canvas id="animalBreakdownChart"></canvas>';
+            }
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {legend: {position: 'right', labels: {color: textColor, font: {size: 14}}}}
+            };
+            animalBreakdownChart = createOrUpdateChart(document.getElementById('animalBreakdownChart'), animalBreakdownChart, 'doughnut', data, options);
+        }
+
+        function filterAndRedrawCharts(filter) {
+            const filterDatasets = (originalData) => {
+                if (!originalData || !originalData.datasets) return {labels: originalData.labels, datasets: []};
+                if (filter === 'all') {
+                    return originalData;
+                }
+                return {
+                    labels: originalData.labels,
+                    datasets: originalData.datasets.filter(ds => ds.label.toLowerCase() === filter)
+                };
+            };
+
+            const baseOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {position: 'top', labels: {color: textColor}},
+                    tooltip: {mode: 'index', intersect: false}
+                }
+            };
+            const scales = {
+                x: {
+                    title: {display: true, color: textColor},
+                    grid: {color: gridColor},
+                    ticks: {color: textColor}
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {display: true, color: textColor},
+                    ticks: {color: textColor},
+                    grid: {color: gridColor}
+                }
+            };
+
+            const dailyOptions = {
+                ...baseOptions,
+                scales: {
+                    ...scales,
+                    x: {...scales.x, title: {...scales.x.title, text: 'Day of the Week'}},
+                    y: {
+                        ...scales.y,
+                        title: {...scales.y.title, text: 'All Activity'},
+                        ticks: {...scales.y.ticks, stepSize: 1}
+                    }
+                }
+            };
+            dailyChart = createOrUpdateChart(dailyCanvas, dailyChart, 'bar', filterDatasets(fullChartData.dailyData), dailyOptions);
+
+            const timelineOptions = {
+                ...baseOptions,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {unit: 'day', tooltipFormat: 'MMM d, yyyy'},
+                        title: {display: true, text: 'Date', color: textColor},
+                        grid: {color: gridColor},
+                        ticks: {color: textColor}
+                    },
+                    y: {
+                        ...scales.y,
+                        title: {...scales.y.title, text: 'Activity'},
+                        ticks: {...scales.y.ticks, stepSize: 1}
+                    }
+                }
+            };
+            timelineChart = createOrUpdateChart(timelineCanvas, timelineChart, 'line', filterDatasets(fullChartData.timelineData), timelineOptions);
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.animal === filter);
+            });
+        }
+
+        function renderFilterButtons(animals) {
+            const currentActive = document.querySelector('.filter-btn.active')?.dataset.animal || 'all';
+            filterButtonsContainer.innerHTML = '';
+            const createButton = (animal, isAllButton = false) => {
+                const btn = document.createElement('button');
+                btn.innerText = isAllButton ? "All Animals" : animal.charAt(0).toUpperCase() + animal.slice(1);
+                btn.dataset.animal = isAllButton ? "all" : animal;
+                btn.className = 'filter-btn px-3 py-1 bg-gray-600 text-gray-200 rounded-md text-sm hover:bg-gray-500 transition-colors';
+                if (btn.dataset.animal === currentActive) {
+                    btn.classList.add('active');
+                }
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    fetchChartData();
+                });
+                return btn;
+            };
+
+            filterButtonsContainer.appendChild(createButton('all', true));
+            animals.forEach(animal => filterButtonsContainer.appendChild(createButton(animal)));
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchChartData);
+    </script>
+    {% endblock %}

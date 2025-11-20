@@ -1,0 +1,1645 @@
+{% extends "base.html" %}
+
+{% block title %}Manage & Upload{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<link href="https://releases.transloadit.com/uppy/v3.10.0/uppy.min.css" rel="stylesheet">
+
+<!-- lightGallery CSS -->
+<link type="text/css" rel="stylesheet"
+      href="{{ url_for('static', filename='vendor/lightgallery/css/lightgallery.css') }}"/>
+<link type="text/css" rel="stylesheet"
+      href="{{ url_for('static', filename='vendor/lightgallery/css/lg-thumbnail.css') }}"/>
+
+<!-- exif-js library -->
+<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+
+
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        padding-bottom: 80px; /* Add padding to prevent bulk bar from overlapping content */
+    }
+
+    .loader {
+        border: 4px solid #4b5563;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite
+    }
+
+    .processing-indicator {
+        width: 24px;
+        height: 24px;
+        border: 3px solid #4b5563;
+        border-top: 3px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        display: none
+    }
+
+    .processing-indicator.active {
+        display: inline-block
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg)
+        }
+        100% {
+            transform: rotate(360deg)
+        }
+    }
+
+    details > summary {
+        list-style: none;
+        cursor: pointer
+    }
+
+    details > summary::-webkit-details-marker {
+        display: none
+    }
+
+    details[open] > summary svg {
+        transform: rotate(180deg)
+    }
+
+    #galleryContainerWrapper::-webkit-scrollbar {
+        width: 8px
+    }
+
+    #galleryContainerWrapper::-webkit-scrollbar-track {
+        background: #374151;
+        border-radius: 10px
+    }
+
+    #galleryContainerWrapper::-webkit-scrollbar-thumb {
+        background: #6b7280;
+        border-radius: 10px
+    }
+
+    #galleryContainerWrapper::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af
+    }
+
+    .retain-toggle:checked + div > div {
+        transform: translateX(100%)
+    }
+
+    .retain-toggle:checked + div {
+        background-color: #2563eb
+    }
+
+    /* --- STYLES FOR BULK EDIT --- */
+    .gallery-card {
+        transition: all 0.2s ease-in-out;
+        border: 2px solid transparent; /* Placeholder for selection */
+    }
+
+    .gallery-card.selected {
+        border-color: #3b82f6; /* Blue border when selected */
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    }
+
+    .gallery-card-checkbox {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 5;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background-color: rgba(0, 0, 0, 0.5);
+        border: 2px solid white;
+        appearance: none;
+        -webkit-appearance: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .gallery-card-checkbox:checked {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+    }
+
+    /* Custom checkmark */
+    .gallery-card-checkbox:checked::after {
+        content: '';
+        display: block;
+        width: 6px;
+        height: 12px;
+        border: solid white;
+        border-width: 0 3px 3px 0;
+        transform: rotate(45deg) translate(0px, -2px);
+        margin-left: 7px;
+    }
+
+    #bulkActionBar {
+        transition: transform 0.3s ease-in-out;
+        transform: translateY(100%);
+    }
+
+    #bulkActionBar.visible {
+        transform: translateY(0);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+    <!-- Local flash container for JS alerts -->
+    <div id="flash-container-local" class="mb-4 space-y-2"></div>
+
+    <header class="text-center mb-8">
+        <div class="mb-6">
+            <a href="{{ url_for('index') }}"
+               class="bg-blue-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-blue-700 inline-block text-lg">&larr;
+                Back to Dashboard</a>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold text-white">Manage & Upload</h1>
+        <p class="text-gray-400 mt-2">Manage cameras, upload new images, and view your gallery.</p>
+    </header>
+
+    {% if not cameras %}
+    <!-- ZERO STATE: When user has no cameras -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-white mb-4">Welcome to GameCam AI!</h2>
+            <div class="text-gray-300 space-y-4">
+                <p>This is your central hub for managing your trail cameras and analyzing the images they capture.</p>
+                <div class="flex items-start bg-blue-900/50 p-4 rounded-lg">
+                    <svg class="flex-shrink-0 h-6 w-6 text-blue-400 mt-1" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-bold text-white">Let's Get Started</h3>
+                        <p class="text-blue-200">To begin, you need to add your first camera using the form on the
+                            right. Once you have a camera, you'll be able to upload images for AI analysis.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gray-800 p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-white mb-4">Step 1: Add a New Camera</h2>
+            <form action="{{ url_for('add_camera') }}" method="POST">
+                <div class="mb-4">
+                    <label for="name" class="block text-gray-400 text-sm font-bold mb-2">Camera Name</label>
+                    <input type="text" name="name" id="name" placeholder="e.g., Back Ridge Stand"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                           required>
+                </div>
+                <div class="mb-6">
+                    <label for="location_zip" class="block text-gray-400 text-sm font-bold mb-2">Location (ZIP
+                        Code)</label>
+                    <input type="text" name="location_zip" id="location_zip" placeholder="e.g., 75001"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white mb-3 leading-tight focus:outline-none focus:shadow-outline"
+                           required pattern="[0-9]{5}" title="Please enter a 5-digit ZIP code.">
+                </div>
+                <button type="submit"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Add Camera
+                </button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <!-- MAIN DASHBOARD: When user has cameras -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-8">
+
+            <!-- Active Camera Count -->
+            <h3 class="text-lg font-medium text-white -mb-4">
+                Active Cameras:
+                <span id="active-count-display" class="font-bold text-blue-400">{{ active_camera_count }}</span> /
+                <span id="limit-display" class="font-bold text-blue-400">{{ camera_limit }}</span>
+            </h3>
+
+            <section class="bg-gray-800 p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-white mb-4">Your Cameras</h2>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-gray-700 rounded-lg">
+                        <thead class="border-b border-gray-600">
+                        <tr>
+                            <th class="text-left p-4 font-semibold text-gray-300">Name</th>
+                            <th class="text-left p-4 font-semibold text-gray-300">Location (ZIP)</th>
+                            <th class="text-left p-4 font-semibold text-gray-300">Status</th>
+                            <th class="text-center p-4 font-semibold text-gray-300">Uploads</th>
+                            <th class="text-center p-4 font-semibold text-gray-300">Sightings</th>
+                            <th class="text-center p-4 font-semibold text-gray-300">Retained</th>
+                            <th class="text-right p-4 font-semibold text-gray-300">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="cameraTableBody">
+                        {% for camera in cameras %}
+                        <tr class="border-b border-gray-600 last:border-b-0">
+                            <td class="p-4 text-white">{{ camera.name }}</td>
+                            <td class="p-4 text-gray-400">{{ camera.location_zip }}</td>
+
+                            <td class="p-4">
+                                {% if camera.is_active %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-800 text-green-300"
+                                      id="status-badge-{{ camera.id }}">
+                                        <svg class="-ml-0.5 mr-1.5 h-2 w-2 text-green-400" fill="currentColor"
+                                             viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+                                        Active
+                                    </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-600 text-gray-300"
+                                      id="status-badge-{{ camera.id }}">
+                                        <svg class="-ml-0.5 mr-1.5 h-2 w-2 text-gray-400" fill="currentColor"
+                                             viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+                                        Inactive
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="p-4 text-center text-white">{{ camera.image_uploads | default(0) }}</td>
+                            <td class="p-4 text-center text-white">{{ camera.total_sightings | default(0) }}</td>
+                            <td class="p-4 text-center text-white">{{ camera.retained_sightings | default(0) }}</td>
+
+                            <td class="p-4 text-right space-x-2 whitespace-nowrap">
+                                <button type="button"
+                                        class="text-blue-500 hover:text-blue-400 text-sm font-medium rename-btn"
+                                        data-camera-id="{{ camera.id }}" data-camera-name="{{ camera.name }}">Rename
+                                </button>
+                                <button type="button"
+                                        class="text-red-500 hover:text-red-400 text-sm font-medium delete-btn"
+                                        data-camera-id="{{ camera.id }}" data-camera-name="{{ camera.name }}">Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <div class="space-y-8">
+            <!-- Add Camera Section -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-white mb-4">Add a New Camera</h2>
+
+                {% if active_camera_count >= camera_limit %}
+                <div class="bg-blue-900/30 p-4 rounded text-center border border-blue-800">
+                    <p class="text-gray-300 text-sm">You have reached the limit of <strong>{{ camera_limit }}</strong>
+                        active cameras.</p>
+                </div>
+                {% else %}
+                <form action="{{ url_for('add_camera') }}" method="POST">
+                    <div class="mb-4">
+                        <label for="name" class="block text-gray-400 text-sm font-bold mb-2">Camera Name</label>
+                        <input type="text" name="name" id="name" placeholder="e.g., Back Ridge Stand"
+                               class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                               required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="location_zip" class="block text-gray-400 text-sm font-bold mb-2">Location (ZIP
+                            Code)</label>
+                        <input type="text" name="location_zip" id="location_zip" placeholder="e.g., 75001"
+                               class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white mb-3 leading-tight focus:outline-none focus:shadow-outline"
+                               required pattern="[0-9]{5}" title="Please enter a 5-digit ZIP code.">
+                    </div>
+                    <button type="submit"
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Add Camera
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+            <!-- Upload Images Section -->
+            <section class="bg-gray-800 p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-white mb-4">Upload Images</h2>
+                <div class="space-y-4">
+                    <div class="mb-4">
+                        <label for="camera_id" class="block text-gray-400 text-sm font-bold mb-2">Select Camera for
+                            Upload</label>
+                        <select name="camera_id" id="camera_id"
+                                class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline">
+                            <option value="">-- Choose an active camera --</option>
+                            {% for camera in cameras %}
+                            {% if camera.is_active %}
+                            <option value="{{ camera.id }}">{{ camera.name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button id="uploadBtn"
+                            class="w-full bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        Select Files or Folder
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Gallery Section -->
+    <section class="mt-8 bg-gray-800 p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Sightings Gallery</h2>
+        <!-- Filters -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end mb-6">
+            <div>
+                <label for="galleryCameraFilter" class="block text-gray-400 text-sm font-bold mb-2">Filter by
+                    Camera</label>
+                <select id="galleryCameraFilter"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="all">All Cameras</option>
+                    {% for camera in cameras %}
+                    <option value="{{ camera.id }}">{{ camera.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="galleryAnimalFilter" class="block text-gray-400 text-sm font-bold mb-2">Filter by
+                    Animal</label>
+                <select id="galleryAnimalFilter"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="all">All Animals</option>
+                </select>
+            </div>
+            <div>
+                <label for="startDate" class="block text-gray-400 text-sm font-bold mb-2">Start Date</label>
+                <input id="startDate"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                       placeholder="Select Start Date...">
+            </div>
+            <div>
+                <label for="endDate" class="block text-gray-400 text-sm font-bold mb-2">End Date</label>
+                <input id="endDate"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                       placeholder="Select End Date...">
+            </div>
+            <div class="flex items-end pb-2">
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="retainedOnlyFilter" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <span class="ml-3 text-gray-300 text-sm font-medium">Show Retained Only</span>
+                </label>
+            </div>
+        </div>
+        <!-- Select All Button -->
+        <div class="flex justify-between items-center mb-6">
+            <button id="selectAllBtn"
+                    class="bg-gray-600 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-700">Select All
+            </button>
+            <button id="applyGalleryFilters"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700">Apply Filters
+            </button>
+        </div>
+        <!-- Gallery Container -->
+        <div id="galleryContainerWrapper" class="max-h-[48rem] overflow-y-auto p-2 bg-gray-900/50 rounded-lg">
+            <div id="galleryContainer" class="grid grid-cols-2 gap-4 lg:flex lg:flex-wrap lg:gap-4"></div>
+            <div id="loadingIndicator" class="hidden text-center p-4 text-gray-400">Loading more...</div>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<!-- Bulk Action Bar -->
+<div id="bulkActionBar"
+     class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 p-4 shadow-lg z-40 flex items-center justify-between">
+    <div>
+        <span id="bulkSelectCount" class="text-white font-semibold">0 selected</span>
+    </div>
+    <div class="flex items-center space-x-2">
+        <button id="bulkToggleRetainBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium">Toggle Retain
+        </button>
+        <button id="bulkAddIdBtn"
+                class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm font-medium">Add ID
+        </button>
+        <button id="bulkRemoveIdBtn"
+                class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-md text-sm font-medium">Remove ID
+        </button>
+        <button id="bulkMoveBtn"
+                class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md text-sm font-medium">Move
+        </button>
+        <button id="bulkDeleteBtn"
+                class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium">Delete
+        </button>
+    </div>
+</div>
+
+<!-- --- MODALS --- -->
+
+<div id="renameModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Rename Camera</h2>
+        <form id="renameForm" method="POST">
+            <div class="mb-4">
+                <label for="newName" class="block text-gray-400 text-sm font-bold mb-2">New Camera Name</label>
+                <input type="text" name="new_name" id="newName"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                       required>
+            </div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelRename"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md border border-red-500">
+        <h2 class="text-2xl font-semibold text-red-400 mb-4">Are you absolutely sure?</h2>
+        <p class="text-gray-300 mb-2">This action <strong class="text-red-400">cannot</strong> be undone. This will
+            permanently delete the camera and <strong class="font-bold">all of its associated sightings</strong>.</p>
+        <p class="text-gray-400 mb-6">Please type the camera name <strong id="cameraNameToDelete"
+                                                                          class="text-yellow-400 font-semibold"></strong>
+            to confirm.</p>
+        <form id="deleteForm" method="POST">
+            <div class="mb-4">
+                <input type="text" id="deleteConfirmInput" placeholder="Type camera name here"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelDelete"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit" id="confirmDeleteBtn"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>I understand, delete this camera
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="moveModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Move Sighting</h2>
+        <form id="moveForm" method="POST">
+            <input type="hidden" name="sighting_id" id="moveSightingId">
+            <div class="mb-4">
+                <label for="newCameraId" class="block text-gray-400 text-sm font-bold mb-2">Select New Camera</label>
+                <select name="new_camera_id" id="newCameraId"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                        required></select>
+            </div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelMove"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Confirm Move
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="annotateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Add Animal ID</h2>
+        <form id="annotateForm" method="POST">
+            <div class="mb-4">
+                <label for="correctAnimalSelect" class="block text-gray-400 text-sm font-bold mb-2">Animal</label>
+                <select name="animal" id="correctAnimalSelect"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                        required>
+                    <option value="">-- Select an animal --</option>
+                    <option value="deer">Deer</option>
+                    <option value="hog">Hog</option>
+                    <option value="raccoon">Raccoon</option>
+                    <option value="coyote">Coyote</option>
+                    <option value="person">Person</option>
+                    <option value="cat">Cat</option>
+                    <option value="dog">Dog</option>
+                    <option value="bear">Bear</option>
+                    <option value="fox">Fox</option>
+                    <option value="bobcat">Bobcat</option>
+                    <option value="elk">Elk</option>
+                    <option value="turkey">Turkey</option>
+                    <option value="mountain_lion">Mountain Lion</option>
+                    <option value="badger">Badger</option>
+                    <option value="porcupine">Porcupine</option>
+                    <option value="opossum">Opossum</option>
+                </select>
+            </div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelAnnotation"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center justify-center">
+                    Confirm Annotation
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="removeIdModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Remove Animal ID(s)</h2>
+        <form id="removeIdForm" method="POST">
+            <input type="hidden" name="sighting_id" id="removeSightingId">
+            <div id="removeAnimalList" class="space-y-2 mb-6 max-h-60 overflow-y-auto"></div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelRemoveId"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center justify-center">
+                    Remove Selected
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="timestampModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Change Timestamp</h2>
+        <form id="timestampForm" method="POST">
+            <div class="mb-4">
+                <label for="newTimestamp" class="block text-gray-400 text-sm font-bold mb-2">New Date & Time</label>
+                <input type="text" name="new_timestamp" id="newTimestamp"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                       placeholder="Select a new date and time..." required>
+            </div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelTimestamp"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Save Timestamp
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bulk Action Modals -->
+<div id="bulkMoveModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Bulk Move Sightings</h2>
+        <form id="bulkMoveForm">
+            <div class="mb-4">
+                <label for="bulkNewCameraId" class="block text-gray-400 text-sm font-bold mb-2">Select New
+                    Camera</label>
+                <select id="bulkNewCameraId"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                        required>
+                    <!-- Options will be populated by JS -->
+                </select>
+            </div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelBulkMove"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Move Sightings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="bulkAddIdModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Bulk Add Animal ID</h2>
+        <form id="bulkAddIdForm">
+            <div class="mb-4">
+                <label for="bulkAddAnimalSelect" class="block text-gray-400 text-sm font-bold mb-2">Animal to
+                    Add</label>
+                <select id="bulkAddAnimalSelect"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                        required>
+                    <option value="">-- Select an animal --</option>
+                    <option value="deer">Deer</option>
+                    <option value="hog">Hog</option>
+                    <option value="raccoon">Raccoon</option>
+                    <option value="coyote">Coyote</option>
+                    <option value="person">Person</option>
+                    <option value="cat">Cat</option>
+                    <option value="dog">Dog</option>
+                    <option value="bear">Bear</option>
+                    <option value="fox">Fox</option>
+                    <option value="bobcat">Bobcat</option>
+                    <option value="elk">Elk</option>
+                    <option value="turkey">Turkey</option>
+                    <option value="mountain_lion">Mountail Lion</option>
+                    <option value="badger">Badger</option>
+                    <option value="porcupine">Porcupine</option>
+                    <option value="opossum">Opossum</option>
+                </select>
+            </div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelBulkAddId"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Add ID to Sightings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="bulkRemoveIdModal"
+     class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">Bulk Remove Animal ID</h2>
+        <form id="bulkRemoveIdForm">
+            <div class="mb-4">
+                <label for="bulkRemoveAnimalSelect" class="block text-gray-400 text-sm font-bold mb-2">Animal to
+                    Remove</label>
+                <select id="bulkRemoveAnimalSelect"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 bg-gray-700 border-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline"
+                        required>
+                    <option value="">-- Select an animal --</option>
+                    <!-- Options will be populated from unique animals in filter -->
+                </select>
+            </div>
+            <div class="flex items-center justify-end space-x-4">
+                <button type="button" id="cancelBulkRemoveId"
+                        class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Remove ID from Sightings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Library Imports -->
+<script src="https://releases.transloadit.com/uppy/v3.10.0/uppy.min.js" type="module"></script>
+<script src="{{ url_for('static', filename='vendor/lightgallery/js/lightgallery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/lightgallery/js/lg-thumbnail.min.js') }}"></script>
+
+<script type="module">
+    import {Uppy, Dashboard, Tus, Compressor} from "https://releases.transloadit.com/uppy/v3.10.0/uppy.min.mjs";
+
+    // --- Global Page Elements ---
+    const uploadBtn = document.getElementById('uploadBtn');
+    const cameraSelect = document.getElementById('camera_id');
+    const galleryContainerWrapper = document.getElementById('galleryContainerWrapper');
+    const galleryContainer = document.getElementById('galleryContainer');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const galleryCameraFilter = document.getElementById('galleryCameraFilter');
+    const galleryAnimalFilter = document.getElementById('galleryAnimalFilter');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const retainedOnlyFilter = document.getElementById('retainedOnlyFilter');
+    const applyGalleryFiltersBtn = document.getElementById('applyGalleryFilters');
+
+    // --- Bulk Edit Elements ---
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const bulkActionBar = document.getElementById('bulkActionBar');
+    const bulkSelectCount = document.getElementById('bulkSelectCount');
+    const bulkToggleRetainBtn = document.getElementById('bulkToggleRetainBtn');
+    const bulkAddIdBtn = document.getElementById('bulkAddIdBtn');
+    const bulkRemoveIdBtn = document.getElementById('bulkRemoveIdBtn');
+    const bulkMoveBtn = document.getElementById('bulkMoveBtn');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+    // --- JSON Data from Flask ---
+    const camerasJSON = '{{ cameras|tojson|safe }}';
+    const availableCameras = JSON.parse(camerasJSON);
+
+    // --- Modal Elements (Single) ---
+    const renameModal = document.getElementById('renameModal');
+    const renameForm = document.getElementById('renameForm');
+    const newNameInput = document.getElementById('newName');
+    const cancelRenameBtn = document.getElementById('cancelRename');
+    const deleteModal = document.getElementById('deleteModal');
+    const deleteForm = document.getElementById('deleteForm');
+    const cancelDeleteBtn = document.getElementById('cancelDelete');
+    const cameraNameToDeleteSpan = document.getElementById('cameraNameToDelete');
+    const deleteConfirmInput = document.getElementById('deleteConfirmInput');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const moveModal = document.getElementById('moveModal');
+    const moveForm = document.getElementById('moveForm');
+    const cancelMoveBtn = document.getElementById('cancelMove');
+    const newCameraSelect = document.getElementById('newCameraId');
+    const annotateModal = document.getElementById('annotateModal');
+    const annotateForm = document.getElementById('annotateForm');
+    const cancelAnnotationBtn = document.getElementById('cancelAnnotation');
+    const removeIdModal = document.getElementById('removeIdModal');
+    const removeIdForm = document.getElementById('removeIdForm');
+    const cancelRemoveIdBtn = document.getElementById('cancelRemoveId');
+    const removeAnimalList = document.getElementById('removeAnimalList');
+    const removeSightingIdInput = document.getElementById('removeSightingId');
+    const timestampModal = document.getElementById('timestampModal');
+    const timestampForm = document.getElementById('timestampForm');
+    const cancelTimestampBtn = document.getElementById('cancelTimestamp');
+    const newTimestampInput = document.getElementById('newTimestamp');
+    let timestampFp = null;
+
+    // --- Modal Elements (Bulk) ---
+    const bulkMoveModal = document.getElementById('bulkMoveModal');
+    const bulkMoveForm = document.getElementById('bulkMoveForm');
+    const cancelBulkMoveBtn = document.getElementById('cancelBulkMove');
+    const bulkNewCameraIdSelect = document.getElementById('bulkNewCameraId');
+
+    const bulkAddIdModal = document.getElementById('bulkAddIdModal');
+    const bulkAddIdForm = document.getElementById('bulkAddIdForm');
+    const cancelBulkAddIdBtn = document.getElementById('cancelBulkAddId');
+    const bulkAddAnimalSelect = document.getElementById('bulkAddAnimalSelect');
+
+    const bulkRemoveIdModal = document.getElementById('bulkRemoveIdModal');
+    const bulkRemoveIdForm = document.getElementById('bulkRemoveIdForm');
+    const cancelBulkRemoveIdBtn = document.getElementById('cancelBulkRemoveId');
+    const bulkRemoveAnimalSelect = document.getElementById('bulkRemoveAnimalSelect');
+
+    // --- Page State ---
+    let currentPage = 1;
+    let isLoading = false;
+    let allDataLoaded = false;
+    let lgInstance = null;
+    let uniqueAnimalsCache = [];
+    let selectedSightingIds = new Set();
+
+    // *** Helper: Flash Message ***
+    function showFlash(message, category) {
+        const flashContainer = document.getElementById('flash-container-local') || document.getElementById('flash-container');
+        if (!flashContainer) {
+            console.error("No flash container found!");
+            alert(message);
+            return;
+        }
+
+        const alert = document.createElement('div');
+        let classes = 'p-4 mb-4 text-sm rounded-lg ';
+        if (category === 'danger') {
+            classes += 'bg-red-900/50 text-red-300 border border-red-700';
+        } else {
+            classes += 'bg-blue-900/50 text-blue-300 border border-blue-700';
+        }
+        alert.className = classes;
+        alert.setAttribute('role', 'alert');
+        alert.textContent = message;
+
+        flashContainer.appendChild(alert);
+
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            alert.style.transition = 'opacity 0.5s ease';
+            setTimeout(() => alert.remove(), 500);
+        }, 5000);
+    }
+
+    // --- UPPY INITIALIZATION ---
+    if (uploadBtn && cameraSelect) {
+        const uppy = new Uppy({
+            debug: true,
+            autoProceed: false,
+            restrictions: {
+                maxNumberOfFiles: 1000,
+                allowedFileTypes: ['image/*'],
+            },
+        })
+                .use(Dashboard, {
+                    inline: false,
+                    trigger: '#uploadBtn',
+                    target: 'body',
+                    proudlyDisplayPoweredByUppy: false,
+                    closeModalOnClickOutside: true,
+                    theme: 'dark',
+                    note: 'Images will be compressed before upload.',
+                })
+                .use(Compressor, {
+                    quality: 1,
+                    maxWidth: 1920,
+                    maxHeight: 1920,
+                })
+                .use(Tus, {
+                    endpoint: '/files/',
+                    retryDelays: [0, 1000, 3000, 5000, 10000],
+                    chunkSize: 10 * 1024 * 1024,
+                    limit: 1,
+                    removeFingerprintOnSuccess: true,
+                    resume: true
+                });
+
+        uppy.on('file-added', (file) => {
+            EXIF.getData(file.data, function () {
+                const dateTimeOriginal = EXIF.getTag(this, "DateTimeOriginal");
+                if (dateTimeOriginal) {
+                    const parts = dateTimeOriginal.split(' ');
+                    const datePart = parts[0].replace(/:/g, '-');
+                    const isoDateTime = `${datePart}T${parts[1]}`;
+                    uppy.setFileMeta(file.id, {
+                        original_timestamp: isoDateTime
+                    });
+                }
+            });
+        });
+
+        uppy.on('upload', (data) => {
+            const selectedCameraId = cameraSelect.value;
+            if (!selectedCameraId) {
+                uppy.info('Please select a camera before uploading.', 'error', 5000);
+                return false;
+            }
+            data.fileIDs.forEach(fileId => {
+                const file = uppy.getFile(fileId);
+                uppy.setFileMeta(file.id, {
+                    ...file.meta,
+                    camera_id: selectedCameraId,
+                    user_id: '{{ current_user.id }}',
+                    filename: file.name
+                });
+            });
+        });
+
+        uppy.on('complete', (result) => {
+            setTimeout(() => {
+                fetchGalleryData(true);
+                refreshCameraTable();
+            }, 1000);
+        });
+
+        uppy.on('upload-error', (file, error, response) => {
+            console.error('Upload failed for', file.name, ':', error);
+            uppy.info(`Upload failed for ${file.name}. Retrying...`, 'error', 5000);
+        });
+
+        const updateUploadButtonState = () => {
+            const isCameraSelected = cameraSelect.value !== '';
+            uploadBtn.disabled = !isCameraSelected;
+            uploadBtn.textContent = isCameraSelected ? 'Select Files or Folder' : 'Select an Active Camera First';
+        };
+
+        cameraSelect.addEventListener('change', updateUploadButtonState);
+        updateUploadButtonState();
+    }
+
+    // --- GALLERY AND MODAL LOGIC ---
+    if (applyGalleryFiltersBtn) {
+        applyGalleryFiltersBtn.addEventListener('click', () => {
+            fetchGalleryData(true);
+        });
+    }
+
+    if (renameModal) {
+        document.body.addEventListener('click', function (e) {
+            if (e.target.classList.contains('rename-btn')) {
+                const button = e.target;
+                renameForm.action = `/cameras/rename/${button.dataset.cameraId}`;
+                newNameInput.value = button.dataset.cameraName;
+                renameModal.classList.remove('hidden');
+                newNameInput.focus();
+            }
+        });
+        cancelRenameBtn.addEventListener('click', () => renameModal.classList.add('hidden'));
+        renameModal.addEventListener('click', (e) => {
+            if (e.target === renameModal) renameModal.classList.add('hidden');
+        });
+    }
+
+    if (deleteModal) {
+        let expectedCameraName = '';
+        document.body.addEventListener('click', function (e) {
+            if (e.target.classList.contains('delete-btn')) {
+                const button = e.target;
+                expectedCameraName = button.dataset.cameraName;
+                deleteForm.action = `/cameras/delete/${button.dataset.cameraId}`;
+                cameraNameToDeleteSpan.textContent = `"${expectedCameraName}"`;
+                deleteConfirmInput.value = '';
+                confirmDeleteBtn.disabled = true;
+                deleteModal.classList.remove('hidden');
+                deleteConfirmInput.focus();
+            }
+        });
+        cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) deleteModal.classList.add('hidden');
+        });
+        deleteConfirmInput.addEventListener('input', () => {
+            confirmDeleteBtn.disabled = (deleteConfirmInput.value !== expectedCameraName);
+        });
+    }
+
+    if (moveModal) {
+        cancelMoveBtn.addEventListener('click', () => moveModal.classList.add('hidden'));
+        moveModal.addEventListener('click', (e) => {
+            if (e.target === moveModal) moveModal.classList.add('hidden');
+        });
+        moveForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            fetch(e.target.action, {method: 'POST', body: new URLSearchParams(new FormData(e.target))})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            moveModal.classList.add('hidden');
+                            document.querySelector(`.move-sighting-btn[data-sighting-id='${data.sighting_id}']`).closest('.gallery-card').remove();
+                            showFlash('Sighting moved successfully!', 'success');
+                            refreshCameraTable();
+                        } else {
+                            alert(data.error || 'Failed to move sighting.');
+                        }
+                    });
+        });
+    }
+
+    if (annotateModal) {
+        cancelAnnotationBtn.addEventListener('click', () => annotateModal.classList.add('hidden'));
+        annotateModal.addEventListener('click', (e) => {
+            if (e.target === annotateModal) annotateModal.classList.add('hidden');
+        });
+        annotateForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const form = e.target, actionUrl = form.action;
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            fetch(actionUrl, {method: 'POST', body: new URLSearchParams(new FormData(form))})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateSightingCard(data.sighting_id, {animals: data.animals});
+                        } else {
+                            alert(data.error || 'Failed to submit annotation.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error("An error occurred during annotation:", error);
+                        alert("An error occurred. Please refresh the gallery.");
+                    })
+                    .finally(() => {
+                        submitButton.disabled = false;
+                        annotateModal.classList.add('hidden');
+                        refreshCameraTable();
+                    });
+        });
+    }
+
+    if (removeIdModal) {
+        cancelRemoveIdBtn.addEventListener('click', () => removeIdModal.classList.add('hidden'));
+        removeIdModal.addEventListener('click', (e) => {
+            if (e.target === removeIdModal) removeIdModal.classList.add('hidden');
+        });
+        removeIdForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const sightingId = removeSightingIdInput.value;
+            const checkedAnimals = Array.from(removeAnimalList.querySelectorAll('input[type="checkbox"]:checked'));
+            if (checkedAnimals.length === 0) return alert("Please select at least one animal ID to remove.");
+
+            const animalNamesToRemove = checkedAnimals.map(cb => cb.value);
+
+            fetch(`/remove-animal-ids/${sightingId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({animal_names: animalNamesToRemove})
+            })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateSightingCard(data.sighting_id, {animals: data.animals});
+                        } else {
+                            alert(data.error || 'Failed to remove IDs.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error("An error occurred during ID removal:", error);
+                        alert("An error occurred. Please refresh the gallery.");
+                    })
+                    .finally(() => {
+                        removeIdModal.classList.add('hidden');
+                        refreshCameraTable();
+                    });
+        });
+    }
+
+    if (timestampModal) {
+        timestampFp = flatpickr(newTimestampInput, {enableTime: true, dateFormat: "Y-m-d H:i:S", time_24hr: true});
+        cancelTimestampBtn.addEventListener('click', () => timestampModal.classList.add('hidden'));
+        timestampModal.addEventListener('click', (e) => {
+            if (e.target === timestampModal) timestampModal.classList.add('hidden');
+        });
+        timestampForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            fetch(e.target.action, {method: 'POST', body: new URLSearchParams(new FormData(e.target))})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            timestampModal.classList.add('hidden');
+                            updateSightingCard(data.sighting_id, {timestamp: data.new_timestamp});
+                        } else {
+                            alert(data.error || 'Failed to update timestamp.');
+                        }
+                    });
+        });
+    }
+
+    // --- Flatpickr Init ---
+    flatpickr(startDateInput, {dateFormat: "Y-m-d"});
+    flatpickr(endDateInput, {dateFormat: "Y-m-d"});
+
+    // --- Gallery Fetching & Rendering Functions ---
+    function fetchGalleryData(clearContainer = false) {
+        if (clearContainer) {
+            currentPage = 1;
+            allDataLoaded = false;
+            selectedSightingIds.clear();
+            updateBulkActionBar();
+        }
+
+        if (!galleryContainer || isLoading || allDataLoaded) return;
+        isLoading = true;
+        loadingIndicator.classList.remove('hidden');
+
+        if (clearContainer && lgInstance) {
+            lgInstance.destroy();
+            lgInstance = null;
+        }
+
+        const params = new URLSearchParams({
+            camera_id: galleryCameraFilter.value,
+            animal: galleryAnimalFilter.value,
+            page: currentPage,
+            start_date: startDateInput.value,
+            end_date: endDateInput.value,
+            retained_only: retainedOnlyFilter.checked
+        });
+
+        fetch(`/gallery-data?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (clearContainer) galleryContainer.innerHTML = '';
+
+                    if (data.sightings.length > 0) {
+                        renderGallery(data.sightings);
+                        currentPage++;
+                    } else {
+                        allDataLoaded = true;
+                        if (currentPage === 1) galleryContainer.innerHTML = '<p class="text-gray-400 w-full text-center">No sightings found.</p>';
+                    }
+
+                    if (currentPage === 2 && clearContainer) {
+                        renderAnimalFilter(data.uniqueAnimals);
+                        uniqueAnimalsCache = data.uniqueAnimals; // NEW: Cache for bulk modals
+                    }
+
+                    if (lgInstance) {
+                        setTimeout(() => lgInstance.refresh(), 100);
+                    } else if (data.sightings.length > 0 && typeof lightGallery !== 'undefined') {
+                        lgInstance = lightGallery(galleryContainer, {
+                            selector: '.gallery-item',
+                            plugins: [lgThumbnail],
+                            thumbnail: true,
+                            download: false
+                        });
+                    }
+                })
+                .finally(() => {
+                    isLoading = false;
+                    loadingIndicator.classList.add('hidden');
+                });
+    }
+
+    function renderAnimalFilter(animals) {
+        if (!galleryAnimalFilter) return;
+        const currentVal = galleryAnimalFilter.value;
+        galleryAnimalFilter.innerHTML = '<option value="all">All Animals</option>';
+        animals.forEach(animal => {
+            const option = document.createElement('option');
+            option.value = animal.toLowerCase();
+            option.innerText = animal.charAt(0).toUpperCase() + animal.slice(1);
+            if (animal.toLowerCase() === currentVal) option.selected = true;
+            galleryAnimalFilter.appendChild(option);
+        });
+    }
+
+    function renderGallery(sightings) {
+        sightings.forEach(sighting => {
+            const card = document.createElement('div');
+            card.className = 'gallery-card bg-gray-700 rounded-lg shadow-lg relative lg:w-60 lg:flex-shrink-0';
+            card.dataset.sightingId = sighting.id;
+
+            const animals = sighting.animals ? sighting.animals.split(',').map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ') : 'None';
+            const displaySrc = sighting.thumbnail_path ? `/download/${sighting.thumbnail_path}` : (sighting.image_path ? `/download/${sighting.image_path}` : null);
+            const fullImageUrl = sighting.image_path ? `/download/${sighting.image_path}` : null;
+
+            const imageElement = displaySrc ? `<a class="gallery-item" href="${fullImageUrl}"><img src="${displaySrc}" alt="Sighting" class="w-full h-48 object-cover rounded-t-lg"></a>` : `<div class="w-full h-48 bg-gray-600 flex items-center justify-center rounded-t-lg"><p class="text-gray-400 text-sm font-semibold">Image Deleted</p></div>`;
+
+            let annotateButtonHTML = `<button data-sighting-id="${sighting.id}" class="annotate-btn text-gray-200 block w-full text-left px-4 py-2 text-sm hover:bg-gray-600">Add ID</button>`;
+            let removeButtonHTML = `<button data-sighting-id="${sighting.id}" data-animals="${sighting.animals || ''}" class="remove-id-btn text-gray-200 block w-full text-left px-4 py-2 text-sm hover:bg-gray-600" ${!sighting.animals ? 'style="display:none;"' : ''}>Remove ID</button>`;
+            const annotatedUrl = sighting.image_path ? `/download/${sighting.image_path}` : null;
+            const originalUrl = sighting.original_image_path ? `/download/${sighting.original_image_path}` : null;
+            const downloadButtonHTML = (annotatedUrl || originalUrl) ? `<button data-annotated-url="${annotatedUrl || ''}" data-original-url="${originalUrl || ''}" data-sighting-id="${sighting.id}" class="download-btn text-gray-200 block w-full text-left px-4 py-2 text-sm hover:bg-gray-600">Download</button>` : `<span class="text-gray-500 block px-4 py-2 text-sm cursor-not-allowed">Download N/A</span>`;
+
+            const selectionCheckbox = `<input type="checkbox" class="gallery-card-checkbox" data-sighting-id="${sighting.id}">`;
+
+            card.innerHTML = `
+                ${selectionCheckbox}
+                ${imageElement}
+                <div class="p-4">
+                    <p class="text-sm text-gray-400">${sighting.timestamp}</p>
+                    <p class="text-white font-semibold">${animals}</p>
+                    <div class="mt-4 flex justify-between items-center">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" data-sighting-id="${sighting.id}" class="sr-only peer retain-toggle" ${sighting.retained ? 'checked' : ''}>
+                            <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <span class="ml-3 text-gray-300 text-sm font-medium">Retain</span>
+                        </label>
+                        <div class="relative">
+                            <button type="button" class="sighting-menu-btn p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-gray-600 focus:outline-none" data-sighting-id="${sighting.id}"><svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg></button>
+                            <div class="sighting-menu-dropdown origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 hidden z-10">
+                                <div class="py-1">
+                                    ${annotateButtonHTML}
+                                    ${removeButtonHTML}
+                                    ${downloadButtonHTML}
+                                    <button data-sighting-id="${sighting.id}" data-camera-id="${sighting.camera_id}" class="move-sighting-btn text-gray-200 block w-full text-left px-4 py-2 text-sm hover:bg-gray-600">Move</button>
+
+                                    <button data-sighting-id="${sighting.id}" data-timestamp="${sighting.timestamp}" class="change-timestamp-btn text-gray-200 block w-full text-left px-4 py-2 text-sm hover:bg-gray-600">Change Timestamp</button>
+                                    <div class="border-t border-gray-700 my-1"></div>
+                                    <button data-sighting-id="${sighting.id}" class="delete-sighting-btn text-red-400 block w-full text-left px-4 py-2 text-sm hover:bg-gray-600">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            galleryContainer.appendChild(card);
+        });
+    }
+
+    // --- Helper Functions ---
+    function updateSightingCard(sightingId, updates) {
+        const card = document.querySelector(`.gallery-card[data-sighting-id='${sightingId}']`);
+        if (!card) {
+            console.warn(`Could not find card for sighting ${sightingId} to update.`);
+            return;
+        }
+
+        if (updates.hasOwnProperty('animals')) {
+            const animalString = updates.animals;
+            const animalDisplay = card.querySelector('.text-white.font-semibold');
+            const removeIdBtn = card.querySelector('.remove-id-btn');
+
+            if (animalDisplay) {
+                const animals = animalString ? animalString.split(',').map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ') : 'None';
+                animalDisplay.textContent = animals;
+            }
+
+            if (removeIdBtn) {
+                removeIdBtn.dataset.animals = animalString;
+                removeIdBtn.style.display = animalString ? 'block' : 'none';
+            }
+        }
+
+        if (updates.hasOwnProperty('timestamp')) {
+            const timestampDisplay = card.querySelector('.text-sm.text-gray-400');
+            if (timestampDisplay) timestampDisplay.textContent = updates.timestamp;
+
+            const changeTimestampBtn = card.querySelector('.change-timestamp-btn');
+            if (changeTimestampBtn) changeTimestampBtn.dataset.timestamp = updates.timestamp;
+        }
+
+        if (updates.hasOwnProperty('retained')) {
+            const retainToggle = card.querySelector('.retain-toggle');
+            if (retainToggle) {
+                retainToggle.checked = updates.retained;
+            }
+        }
+    }
+
+    function refreshCameraTable() {
+        const tableBody = document.getElementById('cameraTableBody');
+        if (!tableBody) return;
+
+        fetch('/cameras/summary-data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.cameras) {
+                        tableBody.innerHTML = '';
+                        if (data.cameras.length === 0) {
+                            tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">No cameras found.</td></tr>';
+                            return;
+                        }
+
+                        data.cameras.forEach(camera => {
+                            const row = document.createElement('tr');
+                            row.className = 'border-b border-gray-600 last:border-b-0';
+
+                            let statusBadge;
+                            if (camera.is_active) {
+                                statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-800 text-green-300" id="status-badge-${camera.id}">
+                                    <svg class="-ml-0.5 mr-1.5 h-2 w-2 text-green-400" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" /></svg>
+                                    Active
+                                </span>`;
+                            } else {
+                                statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-600 text-gray-300" id="status-badge-${camera.id}">
+                                    <svg class="-ml-0.5 mr-1.5 h-2 w-2 text-gray-400" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" /></svg>
+                                    Inactive
+                                </span>`;
+                            }
+
+                            row.innerHTML = `
+                            <td class="p-4 text-white">${camera.name}</td>
+                            <td class="p-4 text-gray-400">${camera.location_zip}</td>
+                            <td class="p-4">${statusBadge}</td>
+                            <td class="p-4 text-center text-white">${camera.image_uploads || 0}</td>
+                            <td class="p-4 text-center text-white">${camera.total_sightings || 0}</td>
+                            <td class="p-4 text-center text-white">${camera.retained_sightings || 0}</td>
+                            <td class="p-4 text-right space-x-2 whitespace-nowrap">
+                                <button type="button"
+                                        class="text-blue-500 hover:text-blue-400 text-sm font-medium rename-btn"
+                                        data-camera-id="${camera.id}" data-camera-name="${camera.name}">Rename
+                                </button>
+                                <button type="button"
+                                        class="text-red-500 hover:text-red-400 text-sm font-medium delete-btn"
+                                        data-camera-id="${camera.id}" data-camera-name="${camera.name}">Delete
+                                </button>
+                            </td>
+                        `;
+                            tableBody.appendChild(row);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error refreshing camera table:', error));
+    }
+
+    // --- Bulk Action Bar Helper ---
+    function updateBulkActionBar() {
+        const count = selectedSightingIds.size;
+        if (count > 0) {
+            bulkSelectCount.textContent = `${count} selected`;
+            bulkActionBar.classList.add('visible');
+        } else {
+            bulkActionBar.classList.remove('visible');
+        }
+
+        const totalVisibleCards = galleryContainer.querySelectorAll('.gallery-card').length;
+        if (count > 0 && count === totalVisibleCards) {
+            selectAllBtn.textContent = 'Deselect All';
+        } else {
+            selectAllBtn.textContent = 'Select All';
+        }
+    }
+
+    // --- Toggle Sighting Selection Helper ---
+    function toggleSightingSelection(sightingId) {
+        const card = document.querySelector(`.gallery-card[data-sighting-id='${sightingId}']`);
+        const checkbox = card.querySelector('.gallery-card-checkbox');
+
+        if (selectedSightingIds.has(sightingId)) {
+            selectedSightingIds.delete(sightingId);
+            card.classList.remove('selected');
+            checkbox.checked = false;
+        } else {
+            selectedSightingIds.add(sightingId);
+            card.classList.add('selected');
+            checkbox.checked = true;
+        }
+        updateBulkActionBar();
+    }
+
+    // --- Send Bulk API Request Helper ---
+    async function sendBulkRequest(url, body, actionName) {
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || `Failed to ${actionName}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`Error during ${actionName}:`, error);
+            alert(`An error occurred: ${error.message}`);
+            return null;
+        }
+    }
+
+    // --- Page Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+        if (galleryContainerWrapper) fetchGalleryData(true);
+    });
+
+    // --- Gallery Event Listeners ---
+    if (galleryContainer) {
+        document.addEventListener('click', (e) => {
+            const isMenuButton = e.target.closest('.sighting-menu-btn');
+            if (isMenuButton) {
+                document.querySelectorAll('.sighting-menu-dropdown').forEach(d => {
+                    if (d !== isMenuButton.nextElementSibling) d.classList.add('hidden');
+                });
+
+                const dropdown = isMenuButton.nextElementSibling;
+                const buttonRect = isMenuButton.getBoundingClientRect();
+                const wrapperRect = galleryContainerWrapper.getBoundingClientRect();
+                const spaceBelow = wrapperRect.bottom - buttonRect.bottom;
+                const spaceAbove = buttonRect.top - wrapperRect.top;
+                const dropdownHeight = 220;
+
+                dropdown.classList.remove('bottom-full', 'mb-2', 'mt-2');
+
+                if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+                    dropdown.classList.add('bottom-full', 'mb-2');
+                } else {
+                    dropdown.classList.add('mt-2');
+                }
+
+                dropdown.classList.toggle('hidden');
+                return;
+            }
+            if (!e.target.closest('.sighting-menu-dropdown')) {
+                document.querySelectorAll('.sighting-menu-dropdown').forEach(d => d.classList.add('hidden'));
+            }
+        });
+
+        galleryContainerWrapper.addEventListener('scroll', () => {
+            if (galleryContainerWrapper.scrollTop + galleryContainerWrapper.clientHeight >= galleryContainerWrapper.scrollHeight - 200) {
+                fetchGalleryData();
+            }
+        });
+
+        selectAllBtn.addEventListener('click', () => {
+            const allVisibleCards = galleryContainer.querySelectorAll('.gallery-card');
+            const allVisibleIds = Array.from(allVisibleCards).map(card => card.dataset.sightingId);
+
+            if (selectedSightingIds.size === allVisibleIds.length) {
+                allVisibleIds.forEach(id => {
+                    if (selectedSightingIds.has(id)) {
+                        toggleSightingSelection(id);
+                    }
+                });
+            } else {
+                allVisibleIds.forEach(id => {
+                    if (!selectedSightingIds.has(id)) {
+                        toggleSightingSelection(id);
+                    }
+                });
+            }
+            updateBulkActionBar();
+        });
+
+        galleryContainer.addEventListener('click', e => {
+            const card = e.target.closest('.gallery-card');
+            if (!card) return;
+
+            const sightingId = card.dataset.sightingId;
+            const actionTarget = e.target.closest('button, input, a');
+
+            if (e.target.classList.contains('gallery-card-checkbox')) {
+                toggleSightingSelection(sightingId);
+                return;
+            }
+
+            if (!actionTarget) {
+                toggleSightingSelection(sightingId);
+                return;
+            }
+
+            if (actionTarget && !actionTarget.classList.contains('gallery-card-checkbox')) {
+                document.querySelectorAll('.sighting-menu-dropdown').forEach(d => d.classList.add('hidden'));
+            }
+
+            if (actionTarget.classList.contains('delete-sighting-btn')) {
+                if (confirm('Are you sure you want to permanently delete this sighting?')) {
+                    fetch(`/sighting/delete/${sightingId}`, {method: 'POST'})
+                            .then(res => res.json()).then(data => {
+                        if (data.success) {
+                            card.remove();
+                            selectedSightingIds.delete(sightingId);
+                            updateBulkActionBar();
+                            refreshCameraTable();
+                        }
+                    });
+                }
+            } else if (actionTarget.classList.contains('annotate-btn')) {
+                annotateForm.action = `/annotate-sighting/${sightingId}`;
+                annotateModal.classList.remove('hidden');
+            } else if (actionTarget.classList.contains('remove-id-btn')) {
+                const animals = actionTarget.dataset.animals.split(',').map(a => a.trim()).filter(Boolean);
+                removeSightingIdInput.value = sightingId;
+                removeAnimalList.innerHTML = '';
+                animals.forEach(name => {
+                    removeAnimalList.insertAdjacentHTML('beforeend', `<label class="flex items-center space-x-3 text-white p-2 rounded hover:bg-gray-700"><input type="checkbox" value="${name.toLowerCase()}" class="form-checkbox h-5 w-5 bg-gray-900 border-gray-600 text-blue-600 rounded"><span>${name}</span></label>`);
+                });
+                removeIdModal.classList.remove('hidden');
+            } else if (actionTarget.classList.contains('download-btn')) {
+                const {annotatedUrl, originalUrl, sightingId} = actionTarget.dataset;
+                if (annotatedUrl && originalUrl && annotatedUrl !== originalUrl) {
+                    fetch(annotatedUrl).then(r => r.blob()).then(b => {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(b);
+                        a.download = `sighting_${sightingId}_annotated.jpg`;
+                        a.click();
+                    });
+                    fetch(originalUrl).then(r => r.blob()).then(b => {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(b);
+                        a.download = `sighting_${sightingId}_original.jpg`;
+                        a.click();
+                    });
+                } else if (originalUrl || annotatedUrl) {
+                    fetch(originalUrl || annotatedUrl).then(r => r.blob()).then(b => {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(b);
+                        a.download = `sighting_${sightingId}.jpg`;
+                        a.click();
+                    });
+                }
+            } else if (actionTarget.classList.contains('move-sighting-btn')) {
+                const currentCameraId = actionTarget.dataset.cameraId;
+                newCameraSelect.innerHTML = '';
+                availableCameras.forEach(cam => {
+                    if (String(cam.id) !== currentCameraId) {
+                        newCameraSelect.insertAdjacentHTML('beforeend', `<option value="${cam.id}">${cam.name}</option>`);
+                    }
+                });
+                if (newCameraSelect.options.length > 0) {
+                    moveForm.action = `/sighting/move/${sightingId}`;
+                    moveModal.classList.remove('hidden');
+                } else {
+                    alert('Add another camera to move sightings.');
+                }
+            } else if (actionTarget.classList.contains('change-timestamp-btn')) {
+                timestampForm.action = `/sighting/change-timestamp/${sightingId}`;
+                timestampFp.setDate(actionTarget.dataset.timestamp, true);
+                timestampModal.classList.remove('hidden');
+            }
+        });
+
+        galleryContainer.addEventListener('change', e => {
+            if (e.target.classList.contains('retain-toggle')) {
+                fetch(`/toggle-retain/${e.target.dataset.sightingId}`, {method: 'POST'})
+                        .then(() => refreshCameraTable());
+            }
+        });
+    }
+
+    // --- BULK ACTION LISTENERS ---
+    bulkToggleRetainBtn.addEventListener('click', async () => {
+        const ids = Array.from(selectedSightingIds);
+        const data = await sendBulkRequest('/sightings/bulk-toggle-retain', {sighting_ids: ids}, 'toggle retain');
+
+        if (data && data.success) {
+            Object.entries(data.updated_statuses).forEach(([sightingId, retained]) => {
+                updateSightingCard(sightingId, {retained: retained});
+            });
+            refreshCameraTable();
+            showFlash(`Toggled retain status for ${ids.length} sightings.`, 'success');
+        }
+    });
+
+    bulkDeleteBtn.addEventListener('click', async () => {
+        const ids = Array.from(selectedSightingIds);
+        if (!confirm(`Are you sure you want to permanently delete ${ids.length} sightings? This cannot be undone.`)) {
+            return;
+        }
+
+        const data = await sendBulkRequest('/sightings/bulk-delete', {sighting_ids: ids}, 'delete');
+
+        if (data && data.success) {
+            ids.forEach(id => {
+                document.querySelector(`.gallery-card[data-sighting-id='${id}']`)?.remove();
+                selectedSightingIds.delete(id);
+            });
+            updateBulkActionBar();
+            refreshCameraTable();
+            showFlash(`Deleted ${data.deleted_count} sightings.`, 'success');
+        }
+    });
+
+    bulkMoveBtn.addEventListener('click', () => {
+        bulkNewCameraIdSelect.innerHTML = '';
+        if (availableCameras.length > 0) {
+            availableCameras.forEach(cam => {
+                bulkNewCameraIdSelect.insertAdjacentHTML('beforeend', `<option value="${cam.id}">${cam.name}</option>`);
+            });
+            bulkMoveModal.classList.remove('hidden');
+        } else {
+            alert('No other cameras available to move to.');
+        }
+    });
+
+    cancelBulkMoveBtn.addEventListener('click', () => bulkMoveModal.classList.add('hidden'));
+    bulkMoveModal.addEventListener('click', (e) => {
+        if (e.target === bulkMoveModal) bulkMoveModal.classList.add('hidden');
+    });
+    bulkMoveForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ids = Array.from(selectedSightingIds);
+        const newCameraId = bulkNewCameraIdSelect.value;
+
+        const data = await sendBulkRequest('/sightings/bulk-move', {
+            sighting_ids: ids,
+            new_camera_id: newCameraId
+        }, 'move');
+
+        if (data && data.success) {
+            ids.forEach(id => {
+                document.querySelector(`.gallery-card[data-sighting-id='${id}']`)?.remove();
+                selectedSightingIds.delete(id);
+            });
+            updateBulkActionBar();
+            refreshCameraTable();
+            bulkMoveModal.classList.add('hidden');
+            showFlash(`Moved ${data.moved_count} sightings.`, 'success');
+        }
+    });
+
+    bulkAddIdBtn.addEventListener('click', () => {
+        bulkAddIdModal.classList.remove('hidden');
+    });
+
+    cancelBulkAddIdBtn.addEventListener('click', () => bulkAddIdModal.classList.add('hidden'));
+    bulkAddIdModal.addEventListener('click', (e) => {
+        if (e.target === bulkAddIdModal) bulkAddIdModal.classList.add('hidden');
+    });
+    bulkAddIdForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ids = Array.from(selectedSightingIds);
+        const animalToAdd = bulkAddAnimalSelect.value;
+        if (!animalToAdd) {
+            alert('Please select an animal to add.');
+            return;
+        }
+
+        const data = await sendBulkRequest('/sightings/bulk-add-id', {
+            sighting_ids: ids,
+            animal: animalToAdd
+        }, 'add ID');
+
+        if (data && data.success) {
+            Object.entries(data.updated_sightings).forEach(([sightingId, animals]) => {
+                updateSightingCard(sightingId, {animals: animals});
+            });
+            refreshCameraTable();
+            bulkAddIdModal.classList.add('hidden');
+            showFlash(`Added '${animalToAdd}' to ${ids.length} sightings.`, 'success');
+        }
+    });
+
+    bulkRemoveIdBtn.addEventListener('click', () => {
+        bulkRemoveAnimalSelect.innerHTML = '<option value="">-- Select an animal --</option>';
+        uniqueAnimalsCache.forEach(animal => {
+            if (animal !== "Empty") {
+                const option = document.createElement('option');
+                option.value = animal.toLowerCase();
+                option.innerText = animal.charAt(0).toUpperCase() + animal.slice(1);
+                bulkRemoveAnimalSelect.appendChild(option);
+            }
+        });
+        bulkRemoveIdModal.classList.remove('hidden');
+    });
+
+    cancelBulkRemoveIdBtn.addEventListener('click', () => bulkRemoveIdModal.classList.add('hidden'));
+    bulkRemoveIdModal.addEventListener('click', (e) => {
+        if (e.target === bulkRemoveIdModal) bulkRemoveIdModal.classList.add('hidden');
+    });
+    bulkRemoveIdForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ids = Array.from(selectedSightingIds);
+        const animalToRemove = bulkRemoveAnimalSelect.value;
+        if (!animalToRemove) {
+            alert('Please select an animal to remove.');
+            return;
+        }
+
+        const data = await sendBulkRequest('/sightings/bulk-remove-id', {
+            sighting_ids: ids,
+            animal_name: animalToRemove
+        }, 'remove ID');
+
+        if (data && data.success) {
+            Object.entries(data.updated_sightings).forEach(([sightingId, animals]) => {
+                updateSightingCard(sightingId, {animals: animals});
+            });
+            refreshCameraTable();
+            bulkRemoveIdModal.classList.add('hidden');
+            showFlash(`Removed '${animalToRemove}' from selected sightings.`, 'success');
+        }
+    });
+
+</script>
+{% endblock %}

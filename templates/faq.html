@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}FAQ - GameCam AI{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-gray-800 p-8 rounded-lg shadow-lg">
+    <h1 class="text-3xl font-bold text-white mb-8 text-center">Frequently Asked Questions</h1>
+
+    <div class="space-y-8">
+
+        <section>
+            <h2 class="text-2xl font-semibold text-white mb-4 border-b border-gray-700 pb-2">Getting Started</h2>
+            <div class="space-y-4 text-gray-300">
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">How do I start using GameCam AI?</summary>
+                    <p class="mt-2 text-gray-400">Getting started is easy! Simply create a free account on our <a
+                            href="{{ url_for('signup') }}" class="text-blue-400 hover:underline">Sign Up</a> page. Once
+                        you've created your account, the first step is to add a camera on the "Manage & Upload" page.</p>
+                </details>
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">How do I add a camera?</summary>
+                    <p class="mt-2 text-gray-400">Navigate to the "Manage & Upload" page from the main dashboard. On the
+                        right-hand side, you'll see a form to "Add a New Camera." Simply give your camera a descriptive
+                        name (e.g., "Back Ridge Stand") and provide the ZIP code for its location. The ZIP code is used
+                        to gather historical weather data for your analysis.</p>
+                </details>
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">How do I upload images?</summary>
+                    <p class="mt-2 text-gray-400">Once you have at least one camera, the "Upload Images" box will appear
+                        on the "Manage & Upload" page. First, select the camera you want to associate the images with
+                        from the dropdown menu. Then, you can either click "Upload Files" to select individual images or
+                        "Upload Folder" to upload all images from a specific folder on your computer.<br><br><strong>Please
+                            Note:</strong> To save storage space, the image files themselves are automatically deleted
+                        after 60 days (unless retained). All of your valuable data from the images is kept forever.</p>
+                </details>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-semibold text-white mb-4 border-b border-gray-700 pb-2">Using the Dashboard</h2>
+            <div class="space-y-4 text-gray-300">
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">What is the Prime Time Predictor?</summary>
+                    <p class="mt-2 text-gray-400">The Prime Time Predictor is our flagship feature. It analyzes the
+                        timestamps of all your sightings for a specific animal and calculates the average hourly
+                        activity over time. It then highlights the top windows of activity, helping you predict the best
+                        times to hunt or observe wildlife at that location.</p>
+                </details>
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">How do I use the filters on the dashboard?
+                    </summary>
+                    <p class="mt-2 text-gray-400">At the top of the dashboard, you can filter your data by camera,
+                        animal, and date range. This allows you to focus your analysis on a specific location or
+                        species. For example, you can see the prime movement times for only "Hogs" at your "River
+                        Bottom" camera during the month of November.</p>
+                </details>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-semibold text-white mb-4 border-b border-gray-700 pb-2">Managing Images & Data</h2>
+            <div class="space-y-4 text-gray-300">
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">Are my images stored forever?</summary>
+                    <p class="mt-2 text-gray-400">To help manage storage costs, the actual image files (.jpg, .png,
+                        etc.) are automatically deleted after 60 days. However, all the important metadata—such as the
+                        date, time, camera location, animal detections, and weather conditions—is saved permanently.
+                        This allows your historical graphs and trend analysis to work forever. If you want to keep a
+                        specific image file permanently, simply use the 'Retain' toggle on that image in the
+                        gallery.</p>
+                </details>
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">Why are my images compressed before upload?
+                    </summary>
+                    <p class="mt-2 text-gray-400">We compress images in your browser *before* they are uploaded to
+                        make the upload process much faster, especially when uploading hundreds of files or using a
+                        slower cellular connection from the field. This compression is set to a very high-quality
+                        setting, so there is no noticeable impact on image quality for viewing or AI detection.</p>
+                </details>
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">What does the "Retain" toggle do?</summary>
+                    <p class="mt-2 text-gray-400">The "Retain" toggle marks an image as important, preventing it from
+                        being automatically deleted after 60 days. This is perfect for saving pictures of trophy animals
+                        or unusual sightings.</p>
+                </details>
+                <details class="bg-gray-700 p-4 rounded-lg">
+                    <summary class="font-semibold text-lg cursor-pointer">Is there a limit on how many cameras I can add?</summary>
+                    <p class="mt-2 text-gray-400">Yes, currently all accounts are limited to 5 active cameras to ensure fair usage of our free service.</p>
+                </details>
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}

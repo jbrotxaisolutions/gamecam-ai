@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold text-white mb-6">Admin Dashboard</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-md text-center">
+            <h3 class="text-lg font-semibold text-gray-400">Total Users</h3>
+            <p class="text-4xl font-bold text-white mt-2">{{ total_users }}</p>
+        </div>
+        <div class="bg-gray-800 p-6 rounded-lg shadow-md text-center">
+            <h3 class="text-lg font-semibold text-gray-400">Scout Tier Users</h3>
+            <p class="text-4xl font-bold text-white mt-2">{{ scout_users }}</p>
+        </div>
+        <div class="bg-gray-800 p-6 rounded-lg shadow-md text-center">
+            <h3 class="text-lg font-semibold text-gray-400">Pro Hunter Users</h3>
+            <p class="text-4xl font-bold text-white mt-2">{{ pro_users }}</p>
+        </div>
+    </div>
+
+    <div class="bg-gray-800 p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold text-white mb-4">User Management</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-gray-700 rounded-lg">
+                <thead class="border-b border-gray-600">
+                    <tr>
+                        <th class="text-left p-4 font-semibold text-gray-300">ID</th>
+                        <th class="text-left p-4 font-semibold text-gray-300">Username</th>
+                        <th class="text-left p-4 font-semibold text-gray-300">Email</th>
+                        <th class="text-left p-4 font-semibold text-gray-300">Plan</th>
+                        <th class="text-left p-4 font-semibold text-gray-300">Trial Ends</th>
+                        <th class="text-left p-4 font-semibold text-gray-300">Total Uploads</th>
+                        <th class="text-left p-4 font-semibold text-gray-300">Stored Images</th>
+                        <th class="text-left p-4 font-semibold text-gray-300">Confirmed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="border-b border-gray-600 last:border-b-0 hover:bg-gray-600/50">
+                        <td class="p-4 text-white">{{ user.id }}</td>
+                        <td class="p-4 text-white">{{ user.username }}</td>
+                        <td class="p-4 text-gray-400">{{ user.email }}</td>
+                        <td class="p-4 text-gray-300">{{ user.plan }}</td>
+                        <td class="p-4 text-gray-400">{{ user.trial_ends_at.strftime('%Y-%m-%d') if user.trial_ends_at else 'N/A' }}</td>
+                        <td class="p-4 text-white">{{ user.total_uploads }}</td>
+                        <td class="p-4 text-white">{{ user.stored_images }}</td>
+                        <td class="p-4">
+                            {% if user.confirmed %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-900 text-green-300">Yes</span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-900 text-red-300">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

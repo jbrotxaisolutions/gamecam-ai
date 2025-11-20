@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Feedback{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <section class="bg-gray-800 p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold text-white mb-6">Submit Feedback</h2>
+        <p class="text-gray-400 mb-6">
+            Have an issue, a suggestion for a new feature, or just want to tell us how we're doing?
+            We'd love to hear from you. Your feedback is sent directly to our team.
+        </p>
+
+        <form action="{{ url_for('feedback') }}" method="POST" class="space-y-6">
+
+            {% if not current_user.is_authenticated %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-400">Your Name</label>
+                    <input type="text" name="name" id="name" required
+                           class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-400">Your Email</label>
+                    <input type="email" name="email" id="email" required
+                           class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+            {% endif %}
+            <div>
+                <label for="subject" class="block text-sm font-medium text-gray-400">Subject</label>
+                <select id="subject" name="subject" required
+                        class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="" disabled selected>-- Select a topic --</option>
+                    <option value="Issue">I'm having an issue or found a bug</option>
+                    <option value="Suggestion">I have a suggestion for a new feature</option>
+                    <option value="Praise">I want to share some praise!</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="message_body" class="block text-sm font-medium text-gray-400">Message</label>
+                <textarea id="message_body" name="message_body" rows="6" required
+                          class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Please be as detailed as possible..."></textarea>
+            </div>
+
+            <div>
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700">
+                    Send Feedback
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

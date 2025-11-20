@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-R">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GameCam AI{% endblock %}</title>
+
+    <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-900 text-gray-200 font-sans flex flex-col min-h-screen">
+<nav class="bg-gray-800 shadow-lg">
+    <div class="container mx-auto px-6 py-3 flex justify-between items-center">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('index') }}" class="flex items-center">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="GameCam AI Logo" class="h-10 w-auto">
+            <span class="text-xl font-bold text-white ml-3">GameCam AI</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('landing_page') }}" class="flex items-center">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="GameCam AI Logo" class="h-10 w-auto">
+            <span class="text-xl font-bold text-white ml-3">GameCam AI</span>
+        </a>
+        {% endif %}
+        <div>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('index') }}" class="text-gray-300 hover:text-white text-sm mr-4">Dashboard</a>
+            <a href="{{ url_for('manage_cameras') }}" class="text-gray-300 hover:text-white text-sm mr-4">Manage
+                Cameras</a>
+            <a href="{{ url_for('profile') }}" class="text-gray-300 hover:text-white text-sm mr-4">My Profile</a>
+            <a href="{{ url_for('feedback') }}" class="text-gray-300 hover:text-white text-sm mr-4">Contact Us</a>
+            <a href="{{ url_for('logout') }}" class="text-gray-300 hover:text-white text-sm">Logout</a>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="text-gray-300 hover:text-white text-sm mr-4">Login</a>
+            <a href="{{ url_for('feedback') }}" class="text-gray-300 hover:text-white text-sm mr-4">Contact Us</a>
+            <a href="{{ url_for('signup') }}"
+               class="bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-700">Register</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<main class="flex-grow">
+    <div class="container mx-auto px-6 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="mb-4 max-w-2xl mx-auto">
+            {% for category, message in messages %}
+            <div class="p-4 rounded-md {% if category == 'danger' %}bg-red-900/50 text-red-300{% elif category == 'success' %}bg-green-900/50 text-green-300{% else %}bg-blue-900/50 text-blue-300{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<footer class="bg-gray-800 mt-auto">
+    <div class="container mx-auto px-6 py-4 text-center text-gray-400 text-sm">
+        <p>&copy; 2025 JBroTX AI Solutions LLC. All Rights Reserved.</p>
+        <div class="mt-2">
+            <a href="{{ url_for('faq') }}" class="hover:text-white px-2">FAQ</a>
+            <span>&middot;</span>
+            <a href="{{ url_for('tos') }}" class="hover:text-white px-2">Terms of Service</a>
+            <span>&middot;</span>
+            <a href="{{ url_for('privacy') }}" class="hover:text-white px-2">Privacy Policy</a>
+            <span>&middot;</span>
+            <a href="{{ url_for('feedback') }}" class="hover:text-white px-2">Contact Us</a>
+            <span>&middot;</span>
+            <a href="{{ url_for('donate') }}" class="hover:text-yellow-400 text-yellow-500 px-2 font-semibold">Donate ❤️</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

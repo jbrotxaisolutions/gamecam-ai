@@ -1,0 +1,171 @@
+services:
+  web:
+    build: .
+    user: "0:0"
+    command: gunicorn -w 4 -b 0.0.0.0:5001 --timeout 180 --access-logfile=- --log-level=debug app:app
+    volumes:
+      - .:/app
+      - ./static:/app/static
+      - ./training_data:/app/training_data
+      - ./tusd-uploads:/srv/tusd-data
+    expose:
+      - 5001
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - SERVER_NAME=localhost:8067
+    networks:
+      - gamecam_net
+    # --- ADDED mariadb DEPENDENCY ---
+    depends_on:
+      - redis
+      - mariadb
+    logging: # <-- ADDED LOG ROTATION
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8067:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/vol/static
+    depends_on:
+      - web
+      - tusd
+    networks:
+      - gamecam_net
+    logging: # <-- ADDED LOG ROTATION
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  worker:
+    build: .
+    user: "0:0"
+    command: python -m celery -A app.celery worker --loglevel=info -Q celery,ai_queue --pool=threads --concurrency=2 --time-limit=60 --soft-time-limit=50
+    volumes:
+      - .:/app
+      - ./tusd-uploads:/srv/tusd-data
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    # --- ADDED mariadb DEPENDENCY ---
+    depends_on:
+      - redis
+      - mariadb
+    networks:
+      - gamecam_net
+    # This was already here, left as-is
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    logging: # <-- ADDED LOG ROTATION
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  beat:
+    build: .
+    command: python -m celery -A app.celery beat --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    # --- ADDED mariadb DEPENDENCY ---
+    depends_on:
+      - redis
+      - mariadb
+    networks:
+      - gamecam_net
+    logging: # <-- ADDED LOG ROTATION
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    image: "redis:alpine"
+    networks:
+      - gamecam_net
+    logging: # <-- ADDED LOG ROTATION
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  tusd:
+    image: tusproject/tusd:latest
+    user: "0:0"
+    restart: unless-stopped
+    volumes:
+      - ./tusd-uploads:/srv/tusd-data
+    command: -behind-proxy -port 1080 -hooks-http http://web:5001/hooks/tusd -hooks-http-forward-headers "X-Forwarded-User" -upload-dir /srv/tusd-data
+    expose:
+      - "1080"
+    networks:
+      - gamecam_net
+    logging: # <-- ADDED LOG ROTATION
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # --- ADDED mariadb SERVICE ---
+  mariadb:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306" # Expose for local GUI tools
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - gamecam_net
+    logging: # <-- ADDED LOG ROTATION
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # --- ADDED adminer SERVICE ---
+  adminer:
+    image: adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mariadb
+    networks:
+      - gamecam_net
+    logging: # <-- ADDED LOG ROTATION
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  gamecam_net:
+    external: true
+    name: gamecam-network
+
+# --- ADDED mariadb_data VOLUME ---
+volumes:
+  mariadb_data:

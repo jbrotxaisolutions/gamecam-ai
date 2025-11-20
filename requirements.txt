@@ -1,0 +1,14 @@
+Flask
+Pillow
+requests
+mysql-connector-python
+celery
+redis
+eventlet
+gunicorn
+boto3
+Flask-Login
+Werkzeug
+Flask-Mail
+astral
+flask-limiter
