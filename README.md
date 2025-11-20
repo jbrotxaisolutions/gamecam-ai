@@ -28,7 +28,7 @@ Installation
 
 Clone the repository:
 
-git clone [https://github.com/YOUR_USERNAME/gamecam-ai.git](https://github.com/YOUR_USERNAME/gamecam-ai.git)
+git clone [https://github.com/jbrotxaisolutions/gamecam-ai.git]
 
 
 Install dependencies:
